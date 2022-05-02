@@ -88,16 +88,21 @@ void main() {
 `;
 
 function App() {
+    // Shader state
     const [shader, setShader] = useState(DEFAULT_SHADER);
     const [shaderKind, setShaderKind] = useState<ShaderKind>(
         ShaderKindRay.RayGeneration,
     );
+
+    // Response data by the backend
     const [assembly, setAssembly] = useState<AnnotatedDisassembly | null>(null);
     const [error, setError] = useState('');
 
+    // We decorate line matches in the editors. These are the decoration ids
     const disassemblyDecorationIds = useRef<Array<string>>([]);
     const sourceDecorationIds = useRef<Array<string>>([]);
 
+    // Disassembly editor
     const editorDisassemblyRef =
         useRef<null | monaco.editor.IStandaloneCodeEditor>(null);
     const handleEditorDisassemblyDidMount = (
@@ -106,6 +111,8 @@ function App() {
     ) => {
         editorDisassemblyRef.current = editor;
     };
+
+    // Source editor
     const editorSourceRef = useRef<null | monaco.editor.IStandaloneCodeEditor>(
         null,
     );
@@ -116,13 +123,14 @@ function App() {
         editorSourceRef.current = editor;
     };
 
+    // The assembly text is just all lines concatenated
     const assemblyText = assembly
         ? assembly.instructions
               .map(instruction => instruction.instruction)
               .join('\n')
         : '';
 
-    const decorationsByKey: { [key: string]: number } = {};
+    const decorationsByLineAnnotation: { [key: string]: number } = {};
 
     const disassemblyDecorations: Array<monaco.editor.IModelDeltaDecoration> =
         [];
@@ -145,7 +153,8 @@ function App() {
                     }%);
                     }`);
 
-                    decorationsByKey[thisDecorationKey] = currentDecoration;
+                    decorationsByLineAnnotation[thisDecorationKey] =
+                        currentDecoration;
                 }
 
                 disassemblyDecorations.push({
@@ -162,7 +171,7 @@ function App() {
     }
 
     const sourceDecorations: Array<monaco.editor.IModelDeltaDecoration> = [];
-    for (const [key, id] of Object.entries(decorationsByKey)) {
+    for (const [key, id] of Object.entries(decorationsByLineAnnotation)) {
         const lineAnnotation: LineAnnotation = JSON.parse(key);
         sourceDecorations.push({
             range: new monaco.Range(
@@ -179,7 +188,7 @@ function App() {
     }
 
     // We want to apply our decorations after the text has been updated
-    Promise.resolve().then(() => {
+    new Promise(resolve => setTimeout(resolve, 100)).then(() => {
         disassemblyDecorationIds.current =
             editorDisassemblyRef.current?.deltaDecorations(
                 disassemblyDecorationIds.current,
@@ -193,7 +202,7 @@ function App() {
         console.log(
             editorSourceRef.current,
             sourceDecorations,
-            decorationsByKey,
+            decorationsByLineAnnotation,
         );
     });
 

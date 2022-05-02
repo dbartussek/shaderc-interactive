@@ -63,26 +63,14 @@ pub fn compile_shader(source: &str, shader_kind: &str, file_name: &str) -> Compi
     let result =
         compiler.compile_into_spirv(source, shader_kind, file_name, "main", Some(&options));
 
-    let text_result = compiler.compile_into_spirv_assembly(
-        source,
-        shader_kind,
-        file_name,
-        "main",
-        Some(&options),
-    );
-
     match result {
         Ok(artifact) => {
-            let assembly = artifact.as_binary();
+            let module = load_words(artifact.as_binary()).unwrap();
 
-            let module = load_words(assembly).unwrap();
-
-            let annotated = AnnotatedDisassembly::create(&module);
+            let assembly = AnnotatedDisassembly::create(&module);
 
             Compilation::Success {
-                assembly: annotated,
-                // assembly: module.disassemble(),
-                // assembly: text_result.unwrap().as_text(),
+                assembly,
                 warning: artifact.get_warning_messages(),
             }
         },
