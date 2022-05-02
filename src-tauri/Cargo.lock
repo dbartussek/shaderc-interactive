@@ -70,9 +70,11 @@ dependencies = [
  "eyre",
  "itertools",
  "lazy_static",
+ "rspirv",
  "serde",
  "serde_json",
  "shaderc",
+ "spirv",
  "tauri",
  "tauri-build",
 ]
@@ -2557,6 +2559,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rspirv"
+version = "0.11.0+1.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1503993b59ca9ae4127365c3293517576d7ce56be9f3d8abb1625c85ddc583ba"
+dependencies = [
+ "fxhash",
+ "num-traits",
+ "spirv",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2905,6 +2918,17 @@ dependencies = [
  "gobject-sys 0.14.0",
  "libc",
  "system-deps 5.0.0",
+]
+
+[[package]]
+name = "spirv"
+version = "0.2.0+1.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "246bfa38fe3db3f1dfc8ca5a2cdeb7348c78be2112740cc0ec8ef18b6d94f830"
+dependencies = [
+ "bitflags",
+ "num-traits",
+ "serde",
 ]
 
 [[package]]

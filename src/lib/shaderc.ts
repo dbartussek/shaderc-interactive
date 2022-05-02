@@ -1,7 +1,22 @@
 import { invoke } from '@tauri-apps/api/tauri';
 
+export interface AnnotatedDisassembly {
+    header: string | null;
+    instructions: Array<AnnotatedInstruction>;
+}
+
+export interface AnnotatedInstruction {
+    line: LineAnnotation | null;
+    instruction: string;
+}
+
+export interface LineAnnotation {
+    file: string;
+    line: number;
+}
+
 export interface CompileShaderSuccessData {
-    assembly: string;
+    assembly: AnnotatedDisassembly;
     warning: string;
 }
 export type CompileShaderSuccess = { Success: CompileShaderSuccessData };

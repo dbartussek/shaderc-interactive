@@ -1,6 +1,12 @@
 use lazy_static::lazy_static;
+use rspirv::{
+    binary::Disassemble,
+    dr::{load_words, Module},
+};
 use serde::{Deserialize, Serialize};
 use shaderc::{CompileOptions, Compiler, EnvVersion, ShaderKind, TargetEnv};
+use spirv::Op;
+use std::collections::HashMap;
 
 lazy_static! {
     static ref SHADERC: Compiler = Compiler::new().unwrap();
@@ -8,8 +14,13 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize)]
 pub enum Compilation {
-    Success { assembly: String, warning: String },
-    Failure { error: String },
+    Success {
+        assembly: AnnotatedDisassembly,
+        warning: String,
+    },
+    Failure {
+        error: String,
+    },
 }
 
 #[tauri::command]
@@ -49,7 +60,10 @@ pub fn compile_shader(source: &str, shader_kind: &str, file_name: &str) -> Compi
 
     options.set_generate_debug_info();
 
-    let result = compiler.compile_into_spirv_assembly(
+    let result =
+        compiler.compile_into_spirv(source, shader_kind, file_name, "main", Some(&options));
+
+    let text_result = compiler.compile_into_spirv_assembly(
         source,
         shader_kind,
         file_name,
@@ -59,15 +73,91 @@ pub fn compile_shader(source: &str, shader_kind: &str, file_name: &str) -> Compi
 
     match result {
         Ok(artifact) => {
-            let assembly = artifact.as_text();
+            let assembly = artifact.as_binary();
+
+            let module = load_words(assembly).unwrap();
+
+            let annotated = AnnotatedDisassembly::create(&module);
 
             Compilation::Success {
-                assembly,
+                assembly: annotated,
+                // assembly: module.disassemble(),
+                // assembly: text_result.unwrap().as_text(),
                 warning: artifact.get_warning_messages(),
             }
         },
         Err(e) => Compilation::Failure {
             error: e.to_string(),
         },
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AnnotatedDisassembly {
+    pub header: Option<String>,
+    pub instructions: Vec<AnnotatedInstruction>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AnnotatedInstruction {
+    pub line: Option<LineAnnotation>,
+    pub instruction: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LineAnnotation {
+    pub file: String,
+    pub line: u32,
+}
+
+impl AnnotatedDisassembly {
+    fn create(module: &Module) -> Self {
+        let header = module.header.as_ref().map(|h| h.disassemble());
+
+        let mut line = None;
+        let mut instructions = Vec::new();
+        let mut strings = HashMap::new();
+
+        for instruction in module.all_inst_iter() {
+            let mut add_instruction = true;
+
+            match instruction.class.opcode {
+                // Track strings so we can use them for file names
+                Op::String => {
+                    let id = instruction.result_id.unwrap();
+                    let value = instruction.operands.get(0).unwrap().unwrap_literal_string();
+                    strings.insert(id, value);
+                },
+                Op::Line => {
+                    line = Some(LineAnnotation {
+                        file: strings
+                            .get(&instruction.operands.get(0).unwrap().unwrap_id_ref())
+                            .unwrap()
+                            .to_string(),
+                        line: instruction.operands.get(1).unwrap().unwrap_literal_int32(),
+                    });
+                    add_instruction = false;
+                },
+                Op::Function => {
+                    line = None;
+                },
+                Op::Source => {
+                    add_instruction = false;
+                },
+                _ => (),
+            }
+
+            if add_instruction {
+                instructions.push(AnnotatedInstruction {
+                    line: line.clone(),
+                    instruction: instruction.disassemble(),
+                });
+            }
+        }
+
+        Self {
+            header,
+            instructions,
+        }
     }
 }
