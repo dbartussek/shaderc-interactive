@@ -13,7 +13,7 @@ import {
 } from './lib/shaderc';
 import Editor, { Monaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
-import Prando from 'prando';
+import { makeRainbowColors } from './lib/makeColors';
 
 const DEFAULT_SHADER = `#version 460
 #extension GL_EXT_ray_tracing : require
@@ -89,8 +89,6 @@ void main() {
 `;
 
 function App() {
-    const random = new Prando('');
-
     // Shader state
     const [shader, setShader] = useState(DEFAULT_SHADER);
     const [shaderKind, setShaderKind] = useState<ShaderKind>(
@@ -206,7 +204,6 @@ function App() {
 
     const disassemblyDecorations: Array<monaco.editor.IModelDeltaDecoration> =
         [];
-    let styleSheet = '';
     if (assembly) {
         let currentDecoration = 0;
         let decorationKey = '';
@@ -228,6 +225,7 @@ function App() {
                     options: {
                         isWholeLine: true,
                         className: `colored-line-${currentDecoration}`,
+                        linesDecorationsClassName: `colored-line-head-${currentDecoration}`,
                     },
                 });
             }
@@ -247,26 +245,16 @@ function App() {
             options: {
                 isWholeLine: true,
                 className: `colored-line-${id}`,
+                linesDecorationsClassName: `colored-line-head-${id}`,
             },
         });
     }
 
     // Generate line styles
-    let styles = [];
-    let hue = 0;
-    for (const [key, id] of Object.entries(decorationsByLineAnnotation)) {
-        const lineAnnotation: LineAnnotation = JSON.parse(key);
-        const isHighlighted = highlightedLine === lineAnnotation.line;
-
-        hue = (hue + random.next(15, 60)) % 360;
-        styles.push(`.colored-line-${id} {
-                        background: hsl(${hue}, ${
-            isHighlighted ? 15 : 100
-        }%, ${random.next(13, 25)}%);
-                    }`);
-    }
-
-    styleSheet = styles.join('\n\n');
+    const styleSheet = makeRainbowColors(
+        decorationsByLineAnnotation,
+        highlightedLine,
+    );
 
     // We want to apply our decorations after the text has been updated
     new Promise(resolve => setTimeout(resolve, 100)).then(() => {
