@@ -89,6 +89,8 @@ void main() {
 `;
 
 function App() {
+    const [rainbow, setRainbow] = useState(false);
+
     // Shader state
     const [shader, setShader] = useState(DEFAULT_SHADER);
     const [shaderKind, setShaderKind] = useState<ShaderKind>(
@@ -254,6 +256,7 @@ function App() {
     const styleSheet = makeRainbowColors(
         decorationsByLineAnnotation,
         highlightedLine,
+        !rainbow,
     );
 
     // We want to apply our decorations after the text has been updated
@@ -322,6 +325,15 @@ function App() {
                     )}
                 </select>
                 <button onClick={compile}>Compile</button>
+                <span>
+                    <input
+                        type='checkbox'
+                        id='rainbow'
+                        checked={rainbow}
+                        onChange={e => setRainbow(e.target.checked)}
+                    />
+                    <label htmlFor='rainbow'>Rainbow colors</label>
+                </span>
             </div>
 
             <span style={{ background: 'gray' }}>
