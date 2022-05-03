@@ -207,20 +207,24 @@ function App() {
     const disassemblyDecorations: Array<monaco.editor.IModelDeltaDecoration> =
         [];
     if (assembly) {
-        let currentDecoration = 0;
-        let decorationKey = '';
+        let decorationCounter = 0;
 
         for (let line = 0; line < assembly.instructions.length; line++) {
             const instruction = assembly.instructions[line];
             if (instruction.line) {
                 const thisDecorationKey = JSON.stringify(instruction.line);
-                if (thisDecorationKey !== decorationKey) {
-                    decorationKey = thisDecorationKey;
-                    currentDecoration = currentDecoration + 1;
 
+                // If this is a new source line, add a new decoration id
+                if (
+                    decorationsByLineAnnotation[thisDecorationKey] === undefined
+                ) {
+                    decorationCounter++;
                     decorationsByLineAnnotation[thisDecorationKey] =
-                        currentDecoration;
+                        decorationCounter;
                 }
+
+                const currentDecoration =
+                    decorationsByLineAnnotation[thisDecorationKey];
 
                 disassemblyDecorations.push({
                     range: new monaco.Range(line + 1, 1, line + 1, 1),
