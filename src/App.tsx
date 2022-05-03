@@ -105,15 +105,26 @@ function App() {
     const disassemblyDecorationIds = useRef<Array<string>>([]);
     const sourceDecorationIds = useRef<Array<string>>([]);
 
-
     // Disassembly editor
     const editorDisassemblyRef =
         useRef<null | monaco.editor.IStandaloneCodeEditor>(null);
+
+    const editorDisassemblyClicked = () => {
+        const position = editorDisassemblyRef.current?.getPosition();
+        if (!position) {
+            return;
+        }
+        console.log(position);
+    };
+    const editorDisassemblyClickedRef = useRef(editorDisassemblyClicked);
+    editorDisassemblyClickedRef.current = editorDisassemblyClicked;
+
     const handleEditorDisassemblyDidMount = (
         editor: monaco.editor.IStandaloneCodeEditor,
         monaco: Monaco,
     ) => {
         editorDisassemblyRef.current = editor;
+        editor.onMouseUp(() => editorDisassemblyClickedRef.current());
     };
 
     // Source editor
