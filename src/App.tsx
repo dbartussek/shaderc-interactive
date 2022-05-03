@@ -105,37 +105,94 @@ function App() {
     const disassemblyDecorationIds = useRef<Array<string>>([]);
     const sourceDecorationIds = useRef<Array<string>>([]);
 
+    // Which source line decoration should be highlighted?
+    const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
+
     // Disassembly editor
     const editorDisassemblyRef =
         useRef<null | monaco.editor.IStandaloneCodeEditor>(null);
+    const editorSourceRef = useRef<null | monaco.editor.IStandaloneCodeEditor>(
+        null,
+    );
 
-    const editorDisassemblyClicked = () => {
+    const editorDisassemblyPositionChanged = () => {
         const position = editorDisassemblyRef.current?.getPosition();
         if (!position) {
             return;
         }
-        console.log(position);
+        if (!assembly) {
+            return;
+        }
+        const instruction = assembly.instructions[position.lineNumber - 1];
+        if (!instruction) {
+            return;
+        }
+
+        const sourceLineNumber = instruction.line?.line;
+        if (sourceLineNumber === undefined) {
+            return;
+        }
+        editorSourceRef.current?.revealLineInCenter(sourceLineNumber);
+
+        setHighlightedLine(sourceLineNumber);
     };
-    const editorDisassemblyClickedRef = useRef(editorDisassemblyClicked);
-    editorDisassemblyClickedRef.current = editorDisassemblyClicked;
+    const editorDisassemblyPositionChangedRef = useRef(
+        editorDisassemblyPositionChanged,
+    );
+    editorDisassemblyPositionChangedRef.current =
+        editorDisassemblyPositionChanged;
+
+    // Cursor position in source editor changed
+    const editorSourcePositionChanged = () => {
+        const sourceEditor = editorSourceRef.current;
+        if (!sourceEditor) {
+            return;
+        }
+
+        const position = sourceEditor.getPosition();
+        if (!position) {
+            return;
+        }
+
+        const sourceLineNumber = position.lineNumber;
+        setHighlightedLine(sourceLineNumber);
+
+        const disassemblyEditor = editorDisassemblyRef.current;
+        if (!assembly || !disassemblyEditor) {
+            return;
+        }
+
+        for (const [assemblyLineNumber, instruction] of Array.from(
+            assembly.instructions.entries(),
+        )) {
+            if (instruction.line?.line === sourceLineNumber) {
+                disassemblyEditor.revealLineInCenter(assemblyLineNumber + 1);
+                break;
+            }
+        }
+    };
+    const editorSourcePositionChangedRef = useRef(editorSourcePositionChanged);
+    editorSourcePositionChangedRef.current = editorSourcePositionChanged;
 
     const handleEditorDisassemblyDidMount = (
         editor: monaco.editor.IStandaloneCodeEditor,
         monaco: Monaco,
     ) => {
         editorDisassemblyRef.current = editor;
-        editor.onMouseUp(() => editorDisassemblyClickedRef.current());
+        editor.onDidChangeCursorPosition(() =>
+            editorDisassemblyPositionChangedRef.current(),
+        );
     };
 
     // Source editor
-    const editorSourceRef = useRef<null | monaco.editor.IStandaloneCodeEditor>(
-        null,
-    );
     const handleEditorSourceDidMount = (
         editor: monaco.editor.IStandaloneCodeEditor,
         monaco: Monaco,
     ) => {
         editorSourceRef.current = editor;
+        editor.onDidChangeCursorPosition(() =>
+            editorSourcePositionChangedRef.current(),
+        );
     };
 
     // The assembly text is just all lines concatenated
@@ -197,14 +254,17 @@ function App() {
     // Generate line styles
     let styles = [];
     let hue = 0;
-    for (const id of Object.values(decorationsByLineAnnotation)) {
+    for (const [key, id] of Object.entries(decorationsByLineAnnotation)) {
+        const lineAnnotation: LineAnnotation = JSON.parse(key);
+        const isHighlighted = highlightedLine === lineAnnotation.line;
+
         hue = (hue + random.next(15, 60)) % 360;
         styles.push(`.colored-line-${id} {
-                        background: hsl(${hue}, 100%, ${random.next(13, 25)}%);
+                        background: hsl(${hue}, ${
+            isHighlighted ? 15 : 100
+        }%, ${random.next(13, 25)}%);
                     }`);
     }
-
-    console.log(styles);
 
     styleSheet = styles.join('\n\n');
 
@@ -220,16 +280,10 @@ function App() {
                 sourceDecorationIds.current,
                 sourceDecorations,
             ) || [];
-        console.log(
-            editorSourceRef.current,
-            sourceDecorations,
-            decorationsByLineAnnotation,
-        );
     });
 
     const compile = async () => {
         const result = await compileShader(shader, shaderKind);
-        console.log(result);
 
         if (compileShaderIsSuccess(result)) {
             setAssembly(result.Success.assembly);
