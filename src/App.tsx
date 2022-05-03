@@ -13,6 +13,7 @@ import {
 } from './lib/shaderc';
 import Editor, { Monaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+import Prando from 'prando';
 
 const DEFAULT_SHADER = `#version 460
 #extension GL_EXT_ray_tracing : require
@@ -88,6 +89,8 @@ void main() {
 `;
 
 function App() {
+    const random = new Prando('');
+
     // Shader state
     const [shader, setShader] = useState(DEFAULT_SHADER);
     const [shaderKind, setShaderKind] = useState<ShaderKind>(
@@ -101,6 +104,7 @@ function App() {
     // We decorate line matches in the editors. These are the decoration ids
     const disassemblyDecorationIds = useRef<Array<string>>([]);
     const sourceDecorationIds = useRef<Array<string>>([]);
+
 
     // Disassembly editor
     const editorDisassemblyRef =
@@ -138,7 +142,6 @@ function App() {
     if (assembly) {
         let currentDecoration = 0;
         let decorationKey = '';
-        let styles = [];
 
         for (let line = 0; line < assembly.instructions.length; line++) {
             const instruction = assembly.instructions[line];
@@ -147,11 +150,6 @@ function App() {
                 if (thisDecorationKey !== decorationKey) {
                     decorationKey = thisDecorationKey;
                     currentDecoration = currentDecoration + 1;
-                    styles.push(`.colored-line-${currentDecoration} {
-                        background: hsl(${Math.random() * 360}, 100%, ${
-                        13 + Math.random() * 10
-                    }%);
-                    }`);
 
                     decorationsByLineAnnotation[thisDecorationKey] =
                         currentDecoration;
@@ -166,8 +164,6 @@ function App() {
                 });
             }
         }
-
-        styleSheet = styles.join('\n\n');
     }
 
     const sourceDecorations: Array<monaco.editor.IModelDeltaDecoration> = [];
@@ -186,6 +182,20 @@ function App() {
             },
         });
     }
+
+    // Generate line styles
+    let styles = [];
+    let hue = 0;
+    for (const id of Object.values(decorationsByLineAnnotation)) {
+        hue = (hue + random.next(15, 60)) % 360;
+        styles.push(`.colored-line-${id} {
+                        background: hsl(${hue}, 100%, ${random.next(13, 25)}%);
+                    }`);
+    }
+
+    console.log(styles);
+
+    styleSheet = styles.join('\n\n');
 
     // We want to apply our decorations after the text has been updated
     new Promise(resolve => setTimeout(resolve, 100)).then(() => {
