@@ -10,6 +10,7 @@ import {
     ShaderKindMesh,
     ShaderKindRaster,
     ShaderKindRay,
+    TargetEnv,
 } from './lib/shaderc';
 import Editor, { Monaco } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
@@ -98,10 +99,12 @@ function App() {
     const [shaderKind, setShaderKind] = useState<ShaderKind>(
         ShaderKindRay.RayGeneration,
     );
+    const [targetEnv, setTargetEnv] = useState(TargetEnv.Vulkan);
 
     // Response data by the backend
     const [assembly, setAssembly] = useState<AnnotatedDisassembly | null>(null);
     const [error, setError] = useState('');
+    const [warning, setWarning] = useState('');
 
     // We decorate line matches in the editors. These are the decoration ids
     const disassemblyDecorationIds = useRef<Array<string>>([]);
@@ -280,14 +283,16 @@ function App() {
     });
 
     const compile = async () => {
-        const result = await compileShader(shader, shaderKind);
+        const result = await compileShader(shader, shaderKind, targetEnv);
 
         if (compileShaderIsSuccess(result)) {
             setAssembly(result.Success.assembly);
-            setError(result.Success.warning);
+            setWarning(result.Success.warning);
+            setError('');
         } else {
             setAssembly(null);
             setError(result.Failure.error);
+            setWarning('');
         }
     };
 
@@ -313,6 +318,20 @@ function App() {
                 className='center-container'
             >
                 <div className='center-element'>
+                    <select
+                        value={targetEnv}
+                        onChange={v =>
+                            setTargetEnv(v.target.value as TargetEnv)
+                        }
+                    >
+                        {Array.from(Object.keys(TargetEnv)).map(target => {
+                            return (
+                                <option value={target} key={target}>
+                                    {target}
+                                </option>
+                            );
+                        })}
+                    </select>
                     <select
                         value={shaderKind}
                         onChange={v =>
@@ -351,7 +370,11 @@ function App() {
 
             <span style={{ background: 'gray' }}>
                 <style>{styleSheet}</style>
-                <table cellPadding="0" cellSpacing="0" style={{ margin: '0 auto', padding: '0' }}>
+                <table
+                    cellPadding='0'
+                    cellSpacing='0'
+                    style={{ margin: '0 auto', padding: '0' }}
+                >
                     <tbody>
                         <tr>
                             <td>
@@ -366,7 +389,7 @@ function App() {
                             </td>
                             <td>
                                 <Editor
-                                    value={assemblyText}
+                                    value={error || assemblyText}
                                     height={`calc(100vh - ${TOP_BAR_HEIGHT})`}
                                     width='50vw'
                                     theme={'vs-dark'}
@@ -379,10 +402,10 @@ function App() {
                 </table>
             </span>
 
-            {error ? (
+            {warning ? (
                 <textarea
                     readOnly={true}
-                    value={error}
+                    value={warning}
                     cols={120}
                     wrap='off'
                     style={{ height: '50vh', width: '90%' }}

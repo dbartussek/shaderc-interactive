@@ -24,7 +24,12 @@ pub enum Compilation {
 }
 
 #[tauri::command]
-pub fn compile_shader(source: &str, shader_kind: &str, file_name: &str) -> Compilation {
+pub fn compile_shader(
+    source: &str,
+    shader_kind: &str,
+    file_name: &str,
+    target_env: &str,
+) -> Compilation {
     let compiler: &Compiler = &SHADERC;
 
     let shader_kind = match shader_kind {
@@ -55,7 +60,21 @@ pub fn compile_shader(source: &str, shader_kind: &str, file_name: &str) -> Compi
 
     let mut options = CompileOptions::new().unwrap();
 
-    options.set_target_env(TargetEnv::Vulkan, EnvVersion::Vulkan1_2 as u32);
+    match target_env {
+        "Vulkan" => {
+            options.set_target_env(TargetEnv::Vulkan, EnvVersion::Vulkan1_2 as u32);
+        },
+        "OpenGL" => {
+            options.set_target_env(TargetEnv::OpenGL, EnvVersion::OpenGL4_5 as u32);
+            options.set_auto_map_locations(true);
+            options.set_auto_bind_uniforms(true);
+        },
+        _ => {
+            return Compilation::Failure {
+                error: format!("Unknown target environment: {}", target_env),
+            }
+        },
+    }
     // options.set_target_spirv(SpirvVersion::V1_6);
 
     options.set_generate_debug_info();

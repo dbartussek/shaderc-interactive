@@ -62,10 +62,21 @@ export type ShaderKind =
     | ShaderKindCompute
     | ShaderKindMesh;
 
+export enum TargetEnv {
+    Vulkan = 'Vulkan',
+    OpenGL = 'OpenGL',
+}
+
 export async function compileShader(
     source: string,
     shaderKind: ShaderKind,
+    targetEnv: TargetEnv = TargetEnv.Vulkan,
     fileName = 'shader.glsl',
 ): Promise<CompileShaderResult> {
-    return await invoke('compile_shader', { source, shaderKind, fileName });
+    return await invoke('compile_shader', {
+        source,
+        shaderKind,
+        fileName,
+        targetEnv,
+    });
 }
