@@ -351,7 +351,7 @@ function App() {
 
             <span style={{ background: 'gray' }}>
                 <style>{styleSheet}</style>
-                <table style={{ margin: '0 auto' }}>
+                <table cellPadding="0" cellSpacing="0" style={{ margin: '0 auto', padding: '0' }}>
                     <tbody>
                         <tr>
                             <td>
