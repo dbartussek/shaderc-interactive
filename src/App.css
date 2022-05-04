@@ -6,6 +6,7 @@ textarea {
 
 .App {
     text-align: center;
+    height: 100vh;
 }
 
 .App-logo {
@@ -41,4 +42,14 @@ textarea {
     to {
         transform: rotate(360deg);
     }
+}
+
+.center-container {
+    position: relative;
+}
+.center-element {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
 }

@@ -88,6 +88,8 @@ void main() {
 }
 `;
 
+const TOP_BAR_HEIGHT = '50px';
+
 function App() {
     const [rainbow, setRainbow] = useState(false);
 
@@ -306,38 +308,45 @@ function App() {
 
     return (
         <div className='App'>
-            <div>
-                <select
-                    value={shaderKind}
-                    onChange={v => setShaderKind(v.target.value as ShaderKind)}
-                >
-                    {createShaderOptions(
-                        'Raster',
-                        Array.from(Object.keys(ShaderKindRaster)),
-                    )}
-                    {createShaderOptions(
-                        'Ray',
-                        Array.from(Object.keys(ShaderKindRay)),
-                    )}
-                    {createShaderOptions(
-                        'Compute',
-                        Array.from(Object.keys(ShaderKindCompute)),
-                    )}
-                    {createShaderOptions(
-                        'Mesh',
-                        Array.from(Object.keys(ShaderKindMesh)),
-                    )}
-                </select>
-                <button onClick={compile}>Compile</button>
-                <span>
-                    <input
-                        type='checkbox'
-                        id='rainbow'
-                        checked={rainbow}
-                        onChange={e => setRainbow(e.target.checked)}
-                    />
-                    <label htmlFor='rainbow'>Rainbow colors</label>
-                </span>
+            <div
+                style={{ height: TOP_BAR_HEIGHT }}
+                className='center-container'
+            >
+                <div className='center-element'>
+                    <select
+                        value={shaderKind}
+                        onChange={v =>
+                            setShaderKind(v.target.value as ShaderKind)
+                        }
+                    >
+                        {createShaderOptions(
+                            'Raster',
+                            Array.from(Object.keys(ShaderKindRaster)),
+                        )}
+                        {createShaderOptions(
+                            'Ray',
+                            Array.from(Object.keys(ShaderKindRay)),
+                        )}
+                        {createShaderOptions(
+                            'Compute',
+                            Array.from(Object.keys(ShaderKindCompute)),
+                        )}
+                        {createShaderOptions(
+                            'Mesh',
+                            Array.from(Object.keys(ShaderKindMesh)),
+                        )}
+                    </select>
+                    <button onClick={compile}>Compile</button>
+                    <span>
+                        <input
+                            type='checkbox'
+                            id='rainbow'
+                            checked={rainbow}
+                            onChange={e => setRainbow(e.target.checked)}
+                        />
+                        <label htmlFor='rainbow'>Rainbow colors</label>
+                    </span>
+                </div>
             </div>
 
             <span style={{ background: 'gray' }}>
@@ -349,7 +358,7 @@ function App() {
                                 <Editor
                                     value={shader}
                                     onChange={v => setShader(v || '')}
-                                    height='90vh'
+                                    height={`calc(100vh - ${TOP_BAR_HEIGHT})`}
                                     width='49vw'
                                     theme={'vs-dark'}
                                     onMount={handleEditorSourceDidMount}
@@ -358,7 +367,7 @@ function App() {
                             <td>
                                 <Editor
                                     value={assemblyText}
-                                    height='90vh'
+                                    height={`calc(100vh - ${TOP_BAR_HEIGHT})`}
                                     width='50vw'
                                     theme={'vs-dark'}
                                     options={{ readOnly: true }}
