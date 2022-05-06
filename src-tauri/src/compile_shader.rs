@@ -11,6 +11,23 @@ lazy_static! {
     static ref SHADERC: Compiler = Compiler::new().unwrap();
 }
 
+fn default_target_env() -> String {
+    "Vulkan".to_string()
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileShaderOptions {
+    #[serde(default)]
+    file_name: Option<String>,
+
+    #[serde(default = "default_target_env")]
+    target_env: String,
+
+    #[serde(default)]
+    limit_result_name_length: Option<usize>,
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum Compilation {
     Success {
@@ -26,8 +43,7 @@ pub enum Compilation {
 pub fn compile_shader(
     source: &str,
     shader_kind: &str,
-    file_name: &str,
-    target_env: &str,
+    options: CompileShaderOptions,
 ) -> Compilation {
     let compiler: &Compiler = &SHADERC;
 
@@ -57,34 +73,45 @@ pub fn compile_shader(
         },
     };
 
-    let mut options = CompileOptions::new().unwrap();
+    let mut compile_options = CompileOptions::new().unwrap();
 
-    match target_env {
+    match options.target_env.as_ref() {
         "Vulkan" => {
-            options.set_target_env(TargetEnv::Vulkan, EnvVersion::Vulkan1_2 as u32);
+            compile_options.set_target_env(TargetEnv::Vulkan, EnvVersion::Vulkan1_2 as u32);
         },
         "OpenGL" => {
-            options.set_target_env(TargetEnv::OpenGL, EnvVersion::OpenGL4_5 as u32);
-            options.set_auto_map_locations(true);
-            options.set_auto_bind_uniforms(true);
+            compile_options.set_target_env(TargetEnv::OpenGL, EnvVersion::OpenGL4_5 as u32);
+            compile_options.set_auto_map_locations(true);
+            compile_options.set_auto_bind_uniforms(true);
         },
-        _ => {
+        unknown => {
             return Compilation::Failure {
-                error: format!("Unknown target environment: {}", target_env),
+                error: format!("Unknown target environment: {}", unknown),
             }
         },
     }
 
-    options.set_generate_debug_info();
+    compile_options.set_generate_debug_info();
 
-    let result =
-        compiler.compile_into_spirv(source, shader_kind, file_name, "main", Some(&options));
+    let file_name = options
+        .file_name
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or("shader.glsl");
+
+    let result = compiler.compile_into_spirv(
+        source,
+        shader_kind,
+        file_name,
+        "main",
+        Some(&compile_options),
+    );
 
     match result {
         Ok(artifact) => {
             let module = load_words(artifact.as_binary()).unwrap();
 
-            let assembly = AnnotatedDisassembly::create(&module);
+            let assembly = AnnotatedDisassembly::create(&module, options.limit_result_name_length);
 
             Compilation::Success {
                 assembly,

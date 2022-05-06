@@ -27,7 +27,7 @@ pub struct LineAnnotation {
 }
 
 impl AnnotatedDisassembly {
-    pub fn create(module: &Module) -> Self {
+    pub fn create(module: &Module, limit_result_name_length: Option<usize>) -> Self {
         let info = ModuleInfo::create(module);
 
         let header = module.header.as_ref().map(|h| h.disassemble());
@@ -70,6 +70,7 @@ impl AnnotatedDisassembly {
 
         let lengths = InstructionDisassemblyLengths::for_instructions(
             instructions.iter().map(|instr| &instr.disassembly),
+            limit_result_name_length,
         );
 
         for instr in instructions.iter_mut() {

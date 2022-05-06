@@ -276,7 +276,7 @@ pub struct InstructionDisassemblyLengths {
 }
 
 impl InstructionDisassemblyLengths {
-    pub fn for_instructions<'lt, It>(iterator: It) -> Self
+    pub fn for_instructions<'lt, It>(iterator: It, limit_result_name_length: Option<usize>) -> Self
     where
         It: IntoIterator<Item = &'lt InstructionDisassembly>,
     {
@@ -300,6 +300,10 @@ impl InstructionDisassemblyLengths {
             {
                 *operand_length = (*operand_length).max(operand.len());
             }
+        }
+
+        if let Some(limit_result_name_length) = limit_result_name_length {
+            lengths.result = lengths.result.min(limit_result_name_length);
         }
 
         lengths

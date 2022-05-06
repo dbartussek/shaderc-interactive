@@ -4,6 +4,7 @@ import {
     AnnotatedDisassembly,
     compileShader,
     compileShaderIsSuccess,
+    CompileShaderOptions,
     LineAnnotation,
     ShaderKind,
     ShaderKindCompute,
@@ -119,6 +120,8 @@ function App() {
     const editorSourceRef = useRef<null | monaco.editor.IStandaloneCodeEditor>(
         null,
     );
+
+    const paddingLengthLimit = useRef<null | HTMLInputElement>(null);
 
     const editorDisassemblyPositionChanged = () => {
         const position = editorDisassemblyRef.current?.getPosition();
@@ -283,7 +286,22 @@ function App() {
     });
 
     const compile = async () => {
-        const result = await compileShader(shader, shaderKind, targetEnv);
+        const options: CompileShaderOptions = { targetEnv };
+        const paddingLengthLimitCurrent = paddingLengthLimit.current?.value
+            ? Number(paddingLengthLimit.current?.value)
+            : null;
+        if (
+            typeof paddingLengthLimitCurrent == 'number' &&
+            paddingLengthLimitCurrent >= 0
+        ) {
+            options.limitResultNameLength = Math.floor(
+                paddingLengthLimitCurrent,
+            );
+        }
+
+        console.log(options);
+        const result = await compileShader(shader, shaderKind, options);
+        console.log(result);
 
         if (compileShaderIsSuccess(result)) {
             setAssembly(result.Success.assembly);
@@ -355,7 +373,13 @@ function App() {
                             Array.from(Object.keys(ShaderKindMesh)),
                         )}
                     </select>
-                    <button onClick={compile}>Compile</button>
+                    <span>
+                        <input
+                            type='number'
+                            placeholder='Padding length limit'
+                            ref={paddingLengthLimit}
+                        />
+                    </span>
                     <span>
                         <input
                             type='checkbox'
@@ -365,6 +389,7 @@ function App() {
                         />
                         <label htmlFor='rainbow'>Rainbow colors</label>
                     </span>
+                    <button onClick={compile}>Compile</button>
                 </div>
             </div>
 

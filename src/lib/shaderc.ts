@@ -67,16 +67,20 @@ export enum TargetEnv {
     OpenGL = 'OpenGL',
 }
 
+export interface CompileShaderOptions {
+    targetEnv?: TargetEnv;
+    fileName?: string;
+    limitResultNameLength?: number;
+}
+
 export async function compileShader(
     source: string,
     shaderKind: ShaderKind,
-    targetEnv: TargetEnv = TargetEnv.Vulkan,
-    fileName = 'shader.glsl',
+    options: CompileShaderOptions = {},
 ): Promise<CompileShaderResult> {
     return await invoke('compile_shader', {
         source,
         shaderKind,
-        fileName,
-        targetEnv,
+        options,
     });
 }
