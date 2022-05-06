@@ -1,4 +1,5 @@
 pub mod annotated_disassembly;
+pub mod module_info;
 
 use crate::compile_shader::annotated_disassembly::AnnotatedDisassembly;
 use lazy_static::lazy_static;
@@ -73,7 +74,6 @@ pub fn compile_shader(
             }
         },
     }
-    // options.set_target_spirv(SpirvVersion::V1_6);
 
     options.set_generate_debug_info();
 

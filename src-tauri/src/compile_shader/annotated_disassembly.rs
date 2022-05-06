@@ -1,18 +1,23 @@
+use crate::compile_shader::module_info::{
+    InstructionDisassembly, InstructionDisassemblyLengths, ModuleInfo,
+};
 use rspirv::{binary::Disassemble, dr::Module};
 use serde::{Deserialize, Serialize};
 use spirv::Op;
-use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AnnotatedDisassembly {
     pub header: Option<String>,
     pub instructions: Vec<AnnotatedInstruction>,
+    pub lengths: InstructionDisassemblyLengths,
+    pub info: ModuleInfo,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AnnotatedInstruction {
     pub line: Option<LineAnnotation>,
     pub instruction: String,
+    pub disassembly: InstructionDisassembly,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -23,25 +28,21 @@ pub struct LineAnnotation {
 
 impl AnnotatedDisassembly {
     pub fn create(module: &Module) -> Self {
+        let info = ModuleInfo::create(module);
+
         let header = module.header.as_ref().map(|h| h.disassemble());
 
         let mut line = None;
         let mut instructions = Vec::new();
-        let mut strings = HashMap::new();
 
         for instruction in module.all_inst_iter() {
             let mut add_instruction = true;
 
             match instruction.class.opcode {
-                // Track strings so we can use them for file names
-                Op::String => {
-                    let id = instruction.result_id.unwrap();
-                    let value = instruction.operands.get(0).unwrap().unwrap_literal_string();
-                    strings.insert(id, value);
-                },
                 Op::Line => {
                     line = Some(LineAnnotation {
-                        file: strings
+                        file: info
+                            .strings
                             .get(&instruction.operands.get(0).unwrap().unwrap_id_ref())
                             .unwrap()
                             .to_string(),
@@ -52,7 +53,7 @@ impl AnnotatedDisassembly {
                 Op::Function => {
                     line = None;
                 },
-                Op::Source => {
+                Op::Source | Op::Name => {
                     add_instruction = false;
                 },
                 _ => (),
@@ -62,13 +63,24 @@ impl AnnotatedDisassembly {
                 instructions.push(AnnotatedInstruction {
                     line: line.clone(),
                     instruction: instruction.disassemble(),
+                    disassembly: info.disassemble_instruction(instruction),
                 });
             }
+        }
+
+        let lengths = InstructionDisassemblyLengths::for_instructions(
+            instructions.iter().map(|instr| &instr.disassembly),
+        );
+
+        for instr in instructions.iter_mut() {
+            instr.instruction = lengths.format_instruction(&instr.disassembly, false);
         }
 
         Self {
             header,
             instructions,
+            lengths,
+            info,
         }
     }
 }
