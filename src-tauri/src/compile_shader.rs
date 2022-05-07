@@ -5,14 +5,10 @@ use crate::compile_shader::annotated_disassembly::AnnotatedDisassembly;
 use lazy_static::lazy_static;
 use rspirv::dr::load_words;
 use serde::{Deserialize, Serialize};
-use shaderc::{CompileOptions, Compiler, EnvVersion, ShaderKind, TargetEnv};
+use shaderc::{CompileOptions, Compiler, EnvVersion, ShaderKind, SourceLanguage, TargetEnv};
 
 lazy_static! {
     static ref SHADERC: Compiler = Compiler::new().unwrap();
-}
-
-fn default_target_env() -> String {
-    "Vulkan".to_string()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -21,11 +17,14 @@ pub struct CompileShaderOptions {
     #[serde(default)]
     file_name: Option<String>,
 
-    #[serde(default = "default_target_env")]
-    target_env: String,
+    #[serde(default)]
+    target_env: Option<String>,
 
     #[serde(default)]
     limit_result_name_length: Option<usize>,
+
+    #[serde(default)]
+    entry_point: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -75,7 +74,14 @@ pub fn compile_shader(
 
     let mut compile_options = CompileOptions::new().unwrap();
 
-    match options.target_env.as_ref() {
+    let mut is_hlsl = false;
+
+    match options
+        .target_env
+        .as_ref()
+        .map(|s| s.as_str())
+        .unwrap_or("Vulkan")
+    {
         "Vulkan" => {
             compile_options.set_target_env(TargetEnv::Vulkan, EnvVersion::Vulkan1_2 as u32);
         },
@@ -83,6 +89,10 @@ pub fn compile_shader(
             compile_options.set_target_env(TargetEnv::OpenGL, EnvVersion::OpenGL4_5 as u32);
             compile_options.set_auto_map_locations(true);
             compile_options.set_auto_bind_uniforms(true);
+        },
+        "HLSL" => {
+            compile_options.set_source_language(SourceLanguage::HLSL);
+            is_hlsl = true;
         },
         unknown => {
             return Compilation::Failure {
@@ -97,13 +107,22 @@ pub fn compile_shader(
         .file_name
         .as_ref()
         .map(|s| s.as_str())
-        .unwrap_or("shader.glsl");
+        .unwrap_or(if is_hlsl {
+            "shader.hlsl"
+        } else {
+            "shader.glsl"
+        });
 
     let result = compiler.compile_into_spirv(
         source,
         shader_kind,
         file_name,
-        "main",
+        options
+            .entry_point
+            .as_ref()
+            .map(|s| s.as_str())
+            .filter(|_| is_hlsl)
+            .unwrap_or("main"),
         Some(&compile_options),
     );
 

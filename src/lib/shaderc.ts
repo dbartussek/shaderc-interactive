@@ -65,12 +65,14 @@ export type ShaderKind =
 export enum TargetEnv {
     Vulkan = 'Vulkan',
     OpenGL = 'OpenGL',
+    HLSL = 'HLSL',
 }
 
 export interface CompileShaderOptions {
     targetEnv?: TargetEnv;
     fileName?: string;
     limitResultNameLength?: number;
+    entryPoint?: string;
 }
 
 export async function compileShader(

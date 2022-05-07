@@ -122,6 +122,7 @@ function App() {
     );
 
     const paddingLengthLimit = useRef<null | HTMLInputElement>(null);
+    const entryPoint = useRef<null | HTMLInputElement>(null);
 
     const editorDisassemblyPositionChanged = () => {
         const position = editorDisassemblyRef.current?.getPosition();
@@ -298,6 +299,10 @@ function App() {
                 paddingLengthLimitCurrent,
             );
         }
+        const entryPointValue = entryPoint.current?.value;
+        if (entryPointValue) {
+            options.entryPoint = entryPointValue;
+        }
 
         console.log(options);
         const result = await compileShader(shader, shaderKind, options);
@@ -373,6 +378,14 @@ function App() {
                             Array.from(Object.keys(ShaderKindMesh)),
                         )}
                     </select>
+                    <span>
+                        <input
+                            type='text'
+                            placeholder='Entry point'
+                            ref={entryPoint}
+                            disabled={targetEnv !== TargetEnv.HLSL}
+                        />
+                    </span>
                     <span>
                         <input
                             type='number'
